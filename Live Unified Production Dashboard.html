@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hama Price Extraction Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 30px 15px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .badge {
+            background-color: #e74c3c;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .status-msg {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #bbdefb;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e1e8ed;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.06);
+        }
+        
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #f0f2f5;
+        }
+        
+        .prop-id {
+            font-size: 12px;
+            color: #7f8c8d;
+            background: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .prop-tags {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .tag {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .tag-type { background: #e3f2fd; color: #0d47a1; }
+        .tag-district { background: #e8f5e9; color: #1b5e20; }
+        
+        .raw-text {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+            background: #fafbfc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            min-height: 70px;
+        }
+        
+        .message-preview {
+            background-color: #fffde7;
+            border-left: 4px solid #fdd835;
+            border-right: 4px solid #fdd835;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            color: #5d4037;
+            margin-bottom: 15px;
+        }
+        
+        .actions-area {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: auto;
+        }
+        
+        .btn-whatsapp {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: #25D366;
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: center;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 6px rgba(37, 211, 102, 0.15);
+        }
+        
+        .btn-whatsapp:hover {
+            background-color: #1bd741;
+        }
+        
+        .btn-whatsapp svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            color: #95a5a6;
+            direction: ltr;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>🕵️‍♂️ Live Price Extraction Dashboard (Hama)</h1>
+            <p>Multi-agent communication channel parsing live records matching missing values</p>
+        </div>
+        <div class="badge" id="total-badge">Connecting to Supabase...</div>
+    </div>
+
+    <div id="status-display" class="status-msg">Initializing Supabase connection stream...</div>
+
+    <div class="grid" id="properties-grid">
+        </div>
+
+    <div class="footer">
+        <p>© 2026 Property Entity Resolution System Engine</p>
+    </div>
+</div>
+
+<script>
+    // ====================================================================
+    // ⚙️ PRODUCTION DATABASE CONFIGURATION
+    // ====================================================================
+    const SUPABASE_URL = "https://ghyejtuckhhmpdsaagya.supabase.co"; 
+    const SUPABASE_ANON_KEY = "sb_publishable_qhz4a3Gj96W9oRpTCscD1w_SSihKpz8";
+
+    // Initialize connection stream to Supabase Client API
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Humanized conversational Syrian dialect connector variations
+    const humanConnectors = [
+        "قصدي هاد اللي مكتوب فيه:\n\"{text}\"",
+        "عم أحكي على هاد الإعلان أخي:\n\"{text}\"",
+        "هاد نفسو المكتوب بالنص تبعو:\n\"{text}\"",
+        "يلي مكتوب بنصو هاد الكلام:\n\"{text}\""
+    ];
+
+    // Highly authentic Syrian dialect inquiry templates (Free of Gulf/Soum terms)
+    const syrianTemplates = [
+        "يعطيك العافية أخي، العقار اللي بـ {district} لساتو موجود؟ وقديش طالب فيه؟",
+        "مرحبا، شفت إعلان الـ {property_type} بـ {district}. إذا متاحة لسا ممكن أعرف السعر النهائي؟",
+        "أخي الله يعطيك العافية، ال{property_type} الموجود بـ {district} قديش مطلوب فيه من الآخر؟",
+        "مساء الخير، العقار اللي بـ {district} انباع ولا لسا؟ وإذا موجود قديش السعر النهائي؟",
+        "السلام عليكم، بالنسبة لل{property_type} اللي ناشرها بـ {district}، قديش طالب فيها وهل في مجال بالحكي؟",
+        "أخي لو سمحت، ال{property_type} هاد بـ {district} مباشر من المالك ولا مكتب؟ وقديش حدك فيه؟",
+        "يسعد أوقاتك عيني، بخصوص ال{property_type} يلي بـ {district} لساتو معروض؟ وقديش طالب فيه صاحبو؟",
+        "مرحبا أخي، شفت إعلان ال{property_type} بـ {district} وحابب استفسر إذا لسا ما انباع؟ وقديش السعر عيني؟",
+        "السلام عليكم، أخي ال{property_type} بـ {district} لساتو متاح؟ وإذا إي قديش نهيتو من الآخر؟",
+        "يعطيك العافية حبيب، ال{property_type} يلي بـ {district} لسا موجود؟ قديش السعر المطلوب مشان نعرف إذا بناسب ميزانيتنا؟",
+        "مرحبا أخي، عم دور على عقار بـ {district} وشفت إعلان ال{property_type} تبعك. لساتو متاح؟ وقديش حده النهائي؟",
+        "مساء الخير أخي، بخصوص إعلان ال{property_type} بـ {district}، لساتو موجود ولا اتيسر؟ وإذا موجود قديش نزل سعره؟",
+        "أخي الله يخليك، ال{property_type} يلي بـ {district} لسا متوفر؟ وقديش مطلوب فيه؟ وممكن تفاصيل أكتر عن السعر؟",
+        "يعطيك العافية أخي، بالنسبة لل{property_type} المعروض بـ {district}، لسا للبيع؟ وقديش طالبين فيه نهائي؟",
+        "مرحبا حبيب، شفت حاطط إعلان ل{property_type} بـ {district}، لساتو موجود؟ وقديش السعر المطلوب من الآخر؟"
+    ];
+
+    /**
+     * 🧠 NEW ADVANCED PARSER ENGINE
+     * Strips noise, extracts descriptive structural lines, and stays under URI size caps.
+     */
+    function extractSmartContext(rawText) {
+        if (!rawText) return "";
+
+        // Split text cleanly by lines and remove trailing whitespace tokens
+        let lines = rawText.split(/\r?\n/).map(line => line.trim());
+
+        // Dynamic priority target arrays to capture the property identity footprint
+        let criticalDetails = [];
+        
+        // Patterns to match core specifications
+        const specificationKeywords = /(غرف|صالون|طابق|اتجاه|كسوة|مساحة|شارع|بناء|قريب|إطلالة|طابو|أسهم|فراغ)/;
+
+        for (let i = 0; i < lines.length; i++) {
+            let currentLine = lines[i];
+
+            // 1. Remove aggressive decorative emojis, star walls, and metadata borders
+            currentLine = currentLine.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2700}-\u{27BF}]|[✨🌟⭐✅❌📍🔴🔹▪️▫️📣⚠️🏁📢💎]/gu, '').trim();
+
+            if (!currentLine) continue;
+
+            // 2. Prioritize structural property markers explicitly
+            if (specificationKeywords.test(currentLine)) {
+                criticalDetails.push(currentLine);
+            } else if (criticalDetails.length < 2 && currentLine.length > 15 && !currentLine.includes("للتواصل") && !currentLine.includes("واتساب")) {
+                // Keep descriptive filler fallback if we don't have enough structured lines yet
+                criticalDetails.push(currentLine);
+            }
+
+            // Lock boundaries to 3 clear, highly descriptive lines max for wa.me stability
+            if (criticalDetails.length === 3) break;
+        }
+
+        // Fallback safety layer: If logic yields nothing, gracefully extract initial clean lines
+        if (criticalDetails.length === 0) {
+            criticalDetails = lines.filter(l => l.length > 5).slice(0, 2);
+        }
+
+        return criticalDetails.join("\n") + "...";
+    }
+
+    /**
+     * Fetches real estate records missing price metrics live from Hama City.
+     */
+    async function fetchLiveUnpricedData() {
+        const gridElement = document.getElementById('properties-grid');
+        const badgeElement = document.getElementById('total-badge');
+        const statusElement = document.getElementById('status-display');
+
+        try {
+            statusElement.innerText = "Querying Database for Hama Properties (Hybrid District Resolution)...";
+            
+            const { data: properties, error } = await supabaseClient
+                .from('properties')
+                .select(`
+                    id, 
+                    phones, 
+                    property_type, 
+                    raw_text,
+                    district,
+                    districts(normalized_name)
+                `)
+                .eq('city', 'حماة') 
+                .is('price', null)
+                .eq('is_sold', false) 
+                .not('phones', 'is', null) 
+                .limit(10);
+
+            if (error) throw error;
+
+            if (!properties || properties.length === 0) {
+                statusElement.style.backgroundColor = "#fff3cd";
+                statusElement.style.color = "#856404";
+                statusElement.innerText = "🏁 Pipeline caught up! Zero records found in Hama matching price=null.";
+                badgeElement.innerText = "0 Records";
+                return;
+            }
+
+            statusElement.style.display = "none"; 
+            badgeElement.innerText = `${properties.length} Hama Rows Loaded`;
+            gridElement.innerHTML = ''; 
+
+            properties.forEach((item, index) => {
+                let displayDistrict = "حماة";
+                if (item.districts && item.districts.normalized_name) {
+                    displayDistrict = item.districts.normalized_name.trim();
+                } else if (item.district) {
+                    displayDistrict = item.district.trim();
+                }
+
+                const displayType = item.property_type ? item.property_type.trim() : "العقار";
+                const cleanRawText = item.raw_text ? item.raw_text.trim() : "";
+
+                // ⚡ CALL THE NEW SMART PARSER
+                let smartTextSnippet = extractSmartContext(cleanRawText);
+
+                // Generate conversational inquiry line
+                let baseTemplate = syrianTemplates[index % syrianTemplates.length];
+                let introductoryInquiry = baseTemplate
+                    .replace("{district}", displayDistrict)
+                    .replace("{property_type}", displayType);
+
+                // Append human connector text block with descriptive context
+                let fullWhatsAppPayload = introductoryInquiry;
+                if (smartTextSnippet && smartTextSnippet !== "...") {
+                    let randomConnector = humanConnectors[index % humanConnectors.length];
+                    let formattedContext = randomConnector.replace("{text}", smartTextSnippet);
+                    fullWhatsAppPayload += `\n\n${formattedContext}`;
+                }
+                
+                // Inject tracker ID string safely at the bottom
+                fullWhatsAppPayload += `\n\n[#prop_${item.id}]`;
+
+                let encodedMessage = encodeURIComponent(fullWhatsAppPayload);
+
+                // MULTI-PHONE PARSING ENGINE FOR JSONB STRUCT
+                let phoneTokens = [];
+                if (item.phones) {
+                    if (Array.isArray(item.phones)) {
+                        phoneTokens = item.phones.map(p => p ? String(p).trim() : "").filter(Boolean);
+                    } else if (typeof item.phones === 'object') {
+                        phoneTokens = Object.values(item.phones).map(p => p ? String(p).trim() : "").filter(Boolean);
+                    } else {
+                        let rawPhoneField = String(item.phones);
+                        phoneTokens = rawPhoneField.split(/[,/;\s\-\|]+/).map(p => p.trim()).filter(Boolean);
+                    }
+                }
+
+                let actionButtonsHTML = '';
+                phoneTokens.forEach((phoneToken) => {
+                    let cleanPhone = phoneToken.replace(/[^0-9]/g, '');
+                    if (!cleanPhone || cleanPhone.length < 7) return; 
+
+                    if (cleanPhone.startsWith("09")) {
+                        cleanPhone = "9639" + cleanPhone.substring(2);
+                    } else if (cleanPhone.startsWith("9") && cleanPhone.length === 9) {
+                        cleanPhone = "963" + cleanPhone;
+                    } else if (cleanPhone.startsWith("963") === false) {
+                        cleanPhone = "963" + cleanPhone;
+                    }
+
+                    let targetWhatsAppURL = `https://wa.me/+${cleanPhone}?text=${encodedMessage}`;
+                    
+                    actionButtonsHTML += `
+                        <a href="${targetWhatsAppURL}" target="_blank" class="btn-whatsapp" style="margin-bottom: 5px;">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.457L0 24zm6.59-4.846c1.6.95 3.498 1.451 5.411 1.451 5.424 0 9.835-4.412 9.838-9.84.002-2.63-1.023-5.101-2.884-6.963C17.093 1.84 14.625.815 12.01.815c-5.435 0-9.85 4.414-9.853 9.843-.002 1.922.501 3.8 1.458 5.4l-.38 1.387.414-.41z"/>
+                            </svg>
+                            مراسلة الرقم: ${phoneToken}
+                        </a>
+                    `;
+                });
+
+                if (actionButtonsHTML === '') {
+                    actionButtonsHTML = `<span style="color:#ca1c24; font-size:12px; font-weight:600;">⚠️ No valid contact numbers.</span>`;
+                }
+
+                const cardHTML = `
+                    <div class="card" id="card_container_${item.id}">
+                        <div>
+                            <div class="card-meta">
+                                <span class="prop-id">Live Property ID: #${item.id}</span>
+                                <div class="prop-tags">
+                                    <span class="tag tag-type">${displayType}</span>
+                                    <span class="tag tag-district">${displayDistrict}</span>
+                                </div>
+                            </div>
+                            <div class="raw-text">
+                                <strong>Original Scraped Post Text:</strong><br>
+                                ${cleanRawText || ''}
+                            </div>
+                            <div class="message-preview">
+                                <div style="padding: 8px; font-size:11px; background:#f0f0f0; border-bottom:1px solid #ddd; font-weight:600; color:#444;">
+                                    📝 مظهر الرسالة النهائي على واتساب:
+                                </div>
+                                <div style="padding:10px; white-space: pre-line; font-style: italic; color: #5d4037;">"${fullWhatsAppPayload}"</div>
+                            </div>
+                        </div>
+                        
+                        <div class="actions-area">
+                            ${actionButtonsHTML}
+                            
+                            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #e1e8ed; display:flex; flex-direction:column; gap:8px;">
+                                <div style="display:flex; gap:6px;">
+                                    <input type="text" 
+                                           id="input_price_${item.id}" 
+                                           placeholder="أدخل السعر الجديد هنا..." 
+                                           style="flex:1; padding:8px 12px; border:1px solid #ccd6dd; border-radius:6px; font-size:13px; outline:none;"
+                                           onkeydown="if(event.key === 'Enter') submitPriceUpdate(${item.id})" />
+                                    <button onclick="submitPriceUpdate(${item.id})" 
+                                            id="btn_submit_${item.id}"
+                                            style="background-color:#2a5298; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer; transition:background 0.2s;">
+                                        تحديث
+                                    </button>
+                                </div>
+                                
+                                <button onclick="markPropertyAsSold(${item.id})" 
+                                        id="btn_sold_${item.id}"
+                                        style="background-color:#e74c3c; color:white; border:none; padding:8px 12px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer; width:100%; transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                    🛑 تم بيع العقار (إزالة من القائمة)
+                                </button>
+                            </div>
+                            <div id="error_lbl_${item.id}" style="color:#ca1c24; font-size:11px; margin-top:4px; font-weight:600; display:none;"></div>
+                        </div>
+                    </div>
+                `;
+                gridElement.insertAdjacentHTML('beforeend', cardHTML);
+            });
+
+        } catch (err) {
+            statusElement.style.backgroundColor = "#f8d7da";
+            statusElement.style.color = "#721c24";
+            statusElement.innerText = `❌ Supabase Query Error: ${err.message || err}`;
+            badgeElement.innerText = "Error Loading Data";
+            console.error("Supabase Target Core Pipeline Error: ", err);
+        }
+    }
+
+    /**
+     * Pushes pricing parameters live to Supabase and drops the element view trace cleanly.
+     */
+    async function submitPriceUpdate(propertyId) {
+        const inputField = document.getElementById(`input_price_${propertyId}`);
+        const actionButton = document.getElementById(`btn_submit_${propertyId}`);
+        const soldButton = document.getElementById(`btn_sold_${propertyId}`);
+        const errorLabel = document.getElementById(`error_lbl_${propertyId}`);
+        
+        const targetedPriceValue = inputField.value.trim();
+
+        if (!targetedPriceValue) {
+            errorLabel.innerText = "⚠️ الرجاء إدخال قيمة السعر أولاً";
+            errorLabel.style.display = "block";
+            return;
+        }
+
+        try {
+            errorLabel.style.display = "none";
+            inputField.disabled = true;
+            actionButton.disabled = true;
+            soldButton.disabled = true;
+            actionButton.innerText = "...";
+
+            const { error } = await supabaseClient
+                .from('properties')
+                .update({ price: targetedPriceValue })
+                .eq('id', propertyId);
+
+            if (error) throw error;
+            animateCardRemoval(propertyId);
+
+        } catch (err) {
+            inputField.disabled = false;
+            actionButton.disabled = false;
+            soldButton.disabled = false;
+            actionButton.innerText = "تحديث";
+            errorLabel.innerText = `❌ Error: ${err.message || err}`;
+            errorLabel.style.display = "block";
+        }
+    }
+
+    /**
+     * Flags property as sold in Supabase and clears it from the active pipeline grid view layout.
+     */
+    async function markPropertyAsSold(propertyId) {
+        const inputField = document.getElementById(`input_price_${propertyId}`);
+        const actionButton = document.getElementById(`btn_submit_${propertyId}`);
+        const soldButton = document.getElementById(`btn_sold_${propertyId}`);
+        const errorLabel = document.getElementById(`error_lbl_${propertyId}`);
+
+        try {
+            errorLabel.style.display = "none";
+            inputField.disabled = true;
+            actionButton.disabled = true;
+            soldButton.disabled = true;
+            soldButton.innerText = "جاري الحفظ...";
+            soldButton.style.backgroundColor = "#95a5a6";
+
+            const { error } = await supabaseClient
+                .from('properties')
+                .update({ is_sold: true })
+                .eq('id', propertyId);
+
+            if (error) throw error;
+            animateCardRemoval(propertyId);
+
+        } catch (err) {
+            inputField.disabled = false;
+            actionButton.disabled = false;
+            soldButton.disabled = false;
+            soldButton.innerText = "🛑 تم بيع العقار (إزالة من القائمة)";
+            soldButton.style.backgroundColor = "#e74c3c";
+            
+            errorLabel.innerText = `❌ Error: ${err.message || err}`;
+            errorLabel.style.display = "block";
+        }
+    }
+
+    /**
+     * Reusable visual method handling card element destruction and counter calculations.
+     */
+    function animateCardRemoval(propertyId) {
+        const targetCard = document.getElementById(`card_container_${propertyId}`);
+        const badgeElement = document.getElementById('total-badge');
+
+        targetCard.style.transition = "all 0.4s ease";
+        targetCard.style.opacity = "0";
+        targetCard.style.transform = "scale(0.9)";
+        
+        setTimeout(() => {
+            targetCard.remove();
+            const remainingCards = document.querySelectorAll('#properties-grid .card').length;
+            badgeElement.innerText = `${remainingCards} Hama Rows Remaining`;
+            
+            if (remainingCards === 0) {
+                const statusElement = document.getElementById('status-display');
+                statusElement.style.display = "block";
+                statusElement.style.backgroundColor = "#e8f5e9";
+                statusElement.style.color = "#1b5e20";
+                statusElement.innerText = "🏁 All fetched properties updated successfully!";
+            }
+        }, 400);
+    }
+
+    window.onload = fetchLiveUnpricedData;
+</script>
+
+</body>
+</html>
